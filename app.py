@@ -7,13 +7,18 @@ Original file is located at
     https://colab.research.google.com/drive/1NIPaTMxxuvidFv7sRI3MR087ooThvdIO
 """
 
+import sys
+
 # ===============================
-# 1. INSTALACIÓN DE LIBRERÍAS
+# 1. INSTALACIÓN DE LIBRERÍAS SOLO EN COLAB
 # ===============================
-!pip install streamlit pandas sqlite3-to-sqlalchemy -q
+if 'google.colab' in sys.modules:
+    # Solo se ejecuta si estamos en Google Colab
+    !pip install streamlit pandas sqlite3-to-sqlalchemy -q
 
 import sqlite3
 import pandas as pd
+import streamlit as st
 
 # ===============================
 # 2. CREAR BASE DE DATOS EN MEMORIA
@@ -22,10 +27,10 @@ conn = sqlite3.connect("torneos.db")
 cursor = conn.cursor()
 
 # ===============================
-# 3. CREAR TABLAS
+# 3. CREAR TABLAS (si no existen)
 # ===============================
 cursor.executescript("""
-CREATE TABLE jugadores (
+CREATE TABLE IF NOT EXISTS jugadores (
     id_jugador INTEGER PRIMARY KEY AUTOINCREMENT,
     nombre_completo TEXT NOT NULL,
     categoria TEXT NOT NULL,
@@ -35,7 +40,7 @@ CREATE TABLE jugadores (
     telefono TEXT
 );
 
-CREATE TABLE torneos (
+CREATE TABLE IF NOT EXISTS torneos (
     id_torneo INTEGER PRIMARY KEY AUTOINCREMENT,
     nombre_torneo TEXT NOT NULL,
     categoria TEXT NOT NULL,
@@ -44,7 +49,7 @@ CREATE TABLE torneos (
     ubicacion TEXT
 );
 
-CREATE TABLE partidos (
+CREATE TABLE IF NOT EXISTS partidos (
     id_partido INTEGER PRIMARY KEY AUTOINCREMENT,
     id_torneo INTEGER NOT NULL,
     id_jugador1 INTEGER NOT NULL,
@@ -60,40 +65,46 @@ CREATE TABLE partidos (
 """)
 
 # ===============================
-# 4. INSERTAR DATOS
+# 4. INSERTAR DATOS SI NO EXISTEN
 # ===============================
-jugadores = [
-    ("Juan Pérez", "A", "1990-04-15", "Club Centro", "juanperez@mail.com", "1122334455"),
-    ("Carlos López", "A", "1988-10-02", "Club Norte", "carloslopez@mail.com", "1144556677"),
-    ("Pedro Gómez", "B", "1995-06-21", "Club Sur", "pedrogomez@mail.com", "1133221100"),
-    ("Luis Fernández", "A", "1992-09-11", "Club Centro", "luisfernandez@mail.com", "1177889900"),
-]
-cursor.executemany("""
-INSERT INTO jugadores (nombre_completo, categoria, fecha_nacimiento, club, email, telefono)
-VALUES (?, ?, ?, ?, ?, ?)
-""", jugadores)
+cursor.execute("SELECT COUNT(*) FROM jugadores")
+if cursor.fetchone()[0] == 0:
+    jugadores = [
+        ("Juan Pérez", "A", "1990-04-15", "Club Centro", "juanperez@mail.com", "1122334455"),
+        ("Carlos López", "A", "1988-10-02", "Club Norte", "carloslopez@mail.com", "1144556677"),
+        ("Pedro Gómez", "B", "1995-06-21", "Club Sur", "pedrogomez@mail.com", "1133221100"),
+        ("Luis Fernández", "A", "1992-09-11", "Club Centro", "luisfernandez@mail.com", "1177889900"),
+    ]
+    cursor.executemany("""
+    INSERT INTO jugadores (nombre_completo, categoria, fecha_nacimiento, club, email, telefono)
+    VALUES (?, ?, ?, ?, ?, ?)
+    """, jugadores)
 
-torneos = [
-    ("Abierto-Feb-2025", "A", "2025-02-10", "2025-02-15", "Buenos Aires"),
-    ("Masters-Mar-2025", "B", "2025-03-05", "2025-03-10", "Rosario"),
-]
-cursor.executemany("""
-INSERT INTO torneos (nombre_torneo, categoria, fecha_inicio, fecha_fin, ubicacion)
-VALUES (?, ?, ?, ?, ?)
-""", torneos)
+cursor.execute("SELECT COUNT(*) FROM torneos")
+if cursor.fetchone()[0] == 0:
+    torneos = [
+        ("Abierto-Feb-2025", "A", "2025-02-10", "2025-02-15", "Buenos Aires"),
+        ("Masters-Mar-2025", "B", "2025-03-05", "2025-03-10", "Rosario"),
+    ]
+    cursor.executemany("""
+    INSERT INTO torneos (nombre_torneo, categoria, fecha_inicio, fecha_fin, ubicacion)
+    VALUES (?, ?, ?, ?, ?)
+    """, torneos)
 
-partidos = [
-    (1, 1, 2, 1, "2025-02-10", "Cuartos"),
-    (1, 1, 4, 4, "2025-02-12", "Semifinal"),
-    (1, 4, 1, 1, "2025-02-15", "Final"),
-    (2, 3, 1, 3, "2025-03-05", "Cuartos"),
-    (2, 3, 2, 3, "2025-03-07", "Semifinal"),
-    (2, 3, 4, 4, "2025-03-10", "Final"),
-]
-cursor.executemany("""
-INSERT INTO partidos (id_torneo, id_jugador1, id_jugador2, ganador, fecha_partido, ronda)
-VALUES (?, ?, ?, ?, ?, ?)
-""", partidos)
+cursor.execute("SELECT COUNT(*) FROM partidos")
+if cursor.fetchone()[0] == 0:
+    partidos = [
+        (1, 1, 2, 1, "2025-02-10", "Cuartos"),
+        (1, 1, 4, 4, "2025-02-12", "Semifinal"),
+        (1, 4, 1, 1, "2025-02-15", "Final"),
+        (2, 3, 1, 3, "2025-03-05", "Cuartos"),
+        (2, 3, 2, 3, "2025-03-07", "Semifinal"),
+        (2, 3, 4, 4, "2025-03-10", "Final"),
+    ]
+    cursor.executemany("""
+    INSERT INTO partidos (id_torneo, id_jugador1, id_jugador2, ganador, fecha_partido, ronda)
+    VALUES (?, ?, ?, ?, ?, ?)
+    """, partidos)
 
 conn.commit()
 
@@ -114,70 +125,11 @@ ORDER BY j.categoria, puntos DESC;
 """
 
 df_ranking = pd.read_sql_query(query, conn)
-df_ranking
 
-# Commented out IPython magic to ensure Python compatibility.
-# %%writefile app.py
-# import streamlit as st
-# import sqlite3
-# import pandas as pd
-# 
-# # Conexión
-# conn = sqlite3.connect("torneos.db")
-# 
-# # Ranking
-# query = """
-# SELECT j.id_jugador, j.nombre_completo, j.categoria,
-#        SUM(CASE WHEN p.ganador = j.id_jugador THEN 100 ELSE 0 END) +
-#        COUNT(*) * 10 +
-#        SUM(CASE WHEN p.ganador = j.id_jugador AND p.ronda = 'Final' THEN 200 ELSE 0 END) AS puntos,
-#        COUNT(DISTINCT p.id_torneo) AS torneos_jugados,
-#        SUM(CASE WHEN p.ganador = j.id_jugador AND p.ronda = 'Final' THEN 1 ELSE 0 END) AS torneos_ganados
-# FROM jugadores j
-# JOIN partidos p ON j.id_jugador IN (p.id_jugador1, p.id_jugador2)
-# GROUP BY j.id_jugador, j.nombre_completo, j.categoria
-# ORDER BY j.categoria, puntos DESC;
-# """
-# df_ranking = pd.read_sql_query(query, conn)
-# 
-# st.title("🏆 Ranking de Torneos")
-# st.dataframe(df_ranking)
-#
+# ===============================
+# 6. MOSTRAR RESULTADOS EN STREAMLIT
+# ===============================
+st.title("🏆 Ranking de Torneos")
+st.dataframe(df_ranking)
 
-!streamlit run app.py --server.enableCORS false --server.enableXsrfProtection false --server.port 8501
-
-"""# Task
-Explica cómo descargar el archivo `app.py` a mi computadora y luego subirlo a un repositorio de GitHub.
-
-## Descargar el archivo `app.py`
-
-### Subtask:
-Descargar el archivo `app.py` desde el entorno de Colab a tu computadora local.
-
-## Crear un repositorio en github
-
-### Subtask:
-Crear un nuevo repositorio en tu cuenta de GitHub para alojar el archivo.
-
-## Subir el archivo a github
-
-### Subtask:
-Subir el archivo `app.py` desde tu computadora local al repositorio de GitHub que creaste.
-
-## Verificar la subida en github
-
-### Subtask:
-Confirmar que el archivo `app.py` se ha subido correctamente al repositorio de GitHub.
-
-## Summary:
-
-### Data Analysis Key Findings
-
-*   The process of downloading `app.py` from Colab, creating a GitHub repository, uploading the file, and verifying the upload all require manual steps that cannot be automated through code execution within the given environment.
-*   The provided solutions for each step involve instructions for the user to perform actions outside of the automated process, such as downloading the file from Colab, creating the repository on the GitHub website, and executing Git commands in their local terminal.
-
-### Insights or Next Steps
-
-*   The user needs to manually follow the instructions provided in each step (downloading, creating the repo, uploading, and verifying) to successfully complete the task of transferring the `app.py` file to GitHub.
-*   Future tasks involving file transfers to external platforms like GitHub may require the user to perform manual actions as automated execution within the environment is not always feasible.
-"""
+conn.close()
