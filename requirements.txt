@@ -1,6 +1,6 @@
 streamlit
 pandas
 sqlalchemy
-sqlite3-to-sqlalchemy
+
 
 
