@@ -124,7 +124,28 @@ df_ranking = pd.read_sql_query(query, conn)
 # ===============================
 # 6. MOSTRAR RESULTADOS EN STREAMLIT
 # ===============================
-st.title("🏆 Ranking de Torneos")
-st.dataframe(df_ranking)
+st.title("🏆 Ranking de Torneos por Categoría")
+
+for categoria in sorted(df_ranking['categoria'].unique()):
+    st.subheader(f"Categoría {categoria}")
+    df_categoria = df_ranking[df_ranking['categoria'] == categoria].copy()
+
+    # Ordenar por puntos y agregar columna de posición
+    df_categoria = df_categoria.sort_values(by="puntos", ascending=False).reset_index(drop=True)
+    df_categoria.insert(0, "Posición", range(1, len(df_categoria) + 1))
+
+    # Asegurar mínimo 5 jugadores (rellenar si faltan)
+    while len(df_categoria) < 5:
+        df_categoria.loc[len(df_categoria)] = [
+            len(df_categoria) + 1,  # posición
+            None,                   # id_jugador
+            "Jugador Extra",        # nombre_completo
+            categoria,              # categoria
+            0,                      # puntos
+            0,                      # torneos_jugados
+            0                       # torneos_ganados
+        ]
+
+    st.dataframe(df_categoria)
 
 conn.close()
