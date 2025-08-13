@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
 import sys
+import subprocess
 
 # ===============================
 # 1. INSTALACIÓN DE LIBRERÍAS SOLO EN COLAB
 # ===============================
 if 'google.colab' in sys.modules:
-    !pip install streamlit pandas sqlite3-to-sqlalchemy -q
+    subprocess.check_call([
+        sys.executable, "-m", "pip", "install",
+        "streamlit", "pandas", "sqlite3-to-sqlalchemy", "-q"
+    ])
 
 import sqlite3
 import pandas as pd
